@@ -1,7 +1,8 @@
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { OpenAI } = require('openai');
+const OpenAI = require('openai');
 require('dotenv').config();
 
 const app = express();
@@ -15,14 +16,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.post('/gerar', async (req, res) => {
-  const {
-    produto,
-    publico,
-    pais,
-    idioma,
-    urlProdutor,
-    urlAfiliado
-  } = req.body;
+  const { produto, publico, pais, idioma, urlProdutor, urlAfiliado } = req.body;
 
   try {
     const prompt = `
@@ -45,7 +39,7 @@ Gere:
 - Snippets estruturados (header + valores)
 
 Responda no formato JSON estruturado.
-`;
+    `;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -56,7 +50,7 @@ Responda no formato JSON estruturado.
     const resposta = completion.choices[0].message.content;
     res.json({ sucesso: true, campanha: resposta });
   } catch (error) {
-    console.error(error);
+    console.error('❌ ERRO:', error);
     res.status(500).json({ sucesso: false, erro: 'Erro ao gerar campanha com a IA.' });
   }
 });
