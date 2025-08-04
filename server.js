@@ -1,62 +1,55 @@
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const { OpenAI } = require("openai");
 
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const OpenAI = require('openai');
-require('dotenv').config();
-
+dotenv.config();
 const app = express();
-const port = process.env.PORT || 3000;
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const port = 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/gerar', async (req, res) => {
-  const { produto, publico, pais, idioma, urlProdutor, urlAfiliado } = req.body;
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+app.post("/gerar", async (req, res) => {
   try {
-    const prompt = `
-Você é um especialista em Google Ads. Crie uma campanha para o produto abaixo seguindo este padrão:
+    const { produto, publico, pais, idioma, urlProduto, urlAfiliado } = req.body;
 
-Produto: ${produto}
-Público-alvo: ${publico}
-País: ${pais}
-Idioma: ${idioma}
-Link do produtor: ${urlProdutor}
-Link de afiliado (final): ${urlAfiliado}
+    if (!produto || !publico || !pais || !idioma || !urlProduto || !urlAfiliado) {
+      return res.status(400).json({ sucesso: false, erro: "Todos os campos são obrigatórios." });
+    }
 
-Gere:
-- 15 headlines criativas (máx. 30 caracteres)
-- 4 descrições com até 90 caracteres
-- Palavras-chave com intenção de compra (exatas e de frase)
-- 5 palavras-chave negativas
-- Sitelinks (texto e URL)
-- Callouts curtos
-- Snippets estruturados (header + valores)
+    const prompt = `Gere uma campanha de Google Ads Editor em formato CSV para o produto "${produto}". 
+Público-alvo: ${publico}. 
+País: ${pais}. 
+Idioma: ${idioma}. 
+Link do produto: ${urlProduto}. 
+Link do afiliado: ${urlAfiliado}. 
+A campanha deve ter:
+- Estrutura compatível com Google Ads Editor
+- Anúncios responsivos (RSA)
+- Títulos A/B com SEO e copywriting
+- Descrições persuasivas
+- Sitelinks, Callouts e Snippets
+- Palavras-chave e negativas
+- Foco em alta conversão
+- Colunas separadas por vírgula
 
-Responda no formato JSON estruturado.
-    `;
+Responda apenas com o CSV, sem explicações.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7
+      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4",
     });
 
-    const resposta = completion.choices[0].message.content;
-    res.json({ sucesso: true, campanha: resposta });
+    const csvContent = completion.choices[0].message.content;
+    return res.status(200).json({ sucesso: true, csv: csvContent });
   } catch (error) {
-    console.error('❌ ERRO:', error);
-    res.status(500).json({ sucesso: false, erro: 'Erro ao gerar campanha com a IA.' });
+    console.error("Erro interno:", error);
+    return res.status(500).json({ sucesso: false, erro: "Erro ao gerar campanha com a IA." });
   }
-});
-
-app.get('/', (req, res) => {
-  res.send('✅ Backend da Máquina de Campanha IA está rodando!');
 });
 
 app.listen(port, () => {
